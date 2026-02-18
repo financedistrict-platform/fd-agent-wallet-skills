@@ -21,7 +21,7 @@
 Install with [Vercel's Skills CLI](https://skills.sh):
 
 ```bash
-npx skills add 1stdigital/fd-agent-wallet-skills
+npx skills add financedistrict-platform/fd-agent-wallet-skills
 ```
 
 ## Usage
