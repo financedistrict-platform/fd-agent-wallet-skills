@@ -1,16 +1,23 @@
 ---
 name: authenticate
-description: Sign in to the Finance District agent wallet. Use when you or the user want to log in, sign in, connect, set up, or configure the wallet, or when any wallet operation fails with authentication or "not authenticated" errors. This skill is a prerequisite before sending tokens, swapping, checking balances, or any other wallet operation.
+description: Sign in to the Finance District agent wallet. Use when you or the user want to log in, sign in, register, connect, set up, or configure the wallet, or when any wallet operation fails with authentication or "not authenticated" errors. This skill is a prerequisite before sending tokens, swapping, checking balances, or any other wallet operation.
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: ["Bash(fdx setup*)", "Bash(fdx status*)", "Bash(fdx logout*)"]
+allowed-tools:
+  [
+    "Bash(fdx register*)",
+    "Bash(fdx login*)",
+    "Bash(fdx verify*)",
+    "Bash(fdx status*)",
+    "Bash(fdx logout*)",
+  ]
 ---
 
 # Authenticating with the Finance District Agent Wallet
 
-When the wallet is not signed in (detected via `fdx status` or when wallet operations fail with authentication errors), use the `fdx` CLI to authenticate via OAuth 2.1.
+When the wallet is not signed in (detected via `fdx status` or when wallet operations fail with authentication errors), use the `fdx` CLI to authenticate via email one-time passcode (OTP).
 
-Authentication requires a browser — the agent guides the human through the flow, but the human must complete the browser-based authorization step.
+Authentication is fully headless — no browser is required. If you have access to the user's email inbox (e.g. via an email tool or API), you can complete the entire flow autonomously by reading the OTP from the inbox. Otherwise, ask the human to check their email and provide you with the 8-digit code. This makes it ideal for autonomous agents, Docker containers, CI pipelines, and remote servers.
 
 ## Checking Authentication Status
 
@@ -20,43 +27,37 @@ fdx status
 
 Displays the MCP server URL, token state, expiry, and whether a refresh token is available.
 
-## Authentication Flow
-
-FDX supports two OAuth flows depending on the environment:
-
-### Browser Flow (default)
-
-Use when the human has a browser available on the same machine:
+## Register (First-Time Users)
 
 ```bash
-fdx setup
+fdx register --email you@example.com
 ```
 
-This will:
-
-1. Register a client with the MCP server
-2. Print an authorization URL
-3. Start a local callback server on port 6260
-4. Wait for the human to complete browser authorization
-5. Exchange the authorization code for tokens
-
-**Tell your human:** "Please open the URL in your browser and authorize the wallet. I'll wait for the callback."
-
-### Device Flow
-
-Use when the human cannot open a browser on the same machine (e.g. remote server, headless environment):
+This sends an 8-digit OTP to the provided email. Then complete registration:
 
 ```bash
-fdx setup --device
+fdx verify --code 12345678
 ```
 
-This will:
+If you have access to the user's email inbox (e.g. via an email tool or API), check the inbox for a one-time code from Finance District and use it directly. Otherwise, ask the human:
 
-1. Register a device client with the MCP server
-2. Display a verification URL and a user code
-3. Poll for authorization completion
+**Tell your human:** "Please check your email for an 8-digit code and share it with me so I can complete registration."
 
-**Tell your human:** "Please go to the verification URL on any device, enter the code shown, and authorize. I'll wait here."
+## Login (Returning Users)
+
+```bash
+fdx login --email you@example.com
+```
+
+This sends an 8-digit OTP to the provided email. Then complete login:
+
+```bash
+fdx verify --code 12345678
+```
+
+If you have access to the user's email inbox (e.g. via an email tool or API), check the inbox for a one-time code from Finance District and use it directly. Otherwise, ask the human:
+
+**Tell your human:** "Please check your email for an 8-digit code and share it with me so I can sign you in."
 
 ## Logging Out
 
@@ -64,7 +65,7 @@ This will:
 fdx logout
 ```
 
-Removes stored credentials. The human will need to run `fdx setup` again to re-authenticate.
+Removes stored tokens from the OS credential store and clears `~/.fdx/auth.json`. The human will need to run `fdx login` again to re-authenticate.
 
 ## Example Session
 
@@ -72,10 +73,11 @@ Removes stored credentials. The human will need to run `fdx setup` again to re-a
 # Check current status
 fdx status
 
-# If not authenticated, start login
-fdx setup
+# If not authenticated, start login (or fdx register for new users)
+fdx login --email you@example.com
 
-# Human completes browser authorization...
+# Human provides the OTP from their email...
+fdx verify --code 12345678
 
 # Confirm authentication succeeded
 fdx status
@@ -83,22 +85,23 @@ fdx status
 
 ## Token Lifecycle
 
-- Tokens auto-refresh on subsequent `fdx call` commands if a refresh token is available
-- If the token is expired and no refresh token exists, the human must run `fdx setup` again
-- Token state is stored locally (default: `~/.fdx/auth.json`)
+- Tokens auto-refresh on subsequent `fdx call` commands using the stored refresh token
+- If the refresh token is also expired, the human must run `fdx login` again
+- Tokens are stored in the OS credential store where available (macOS Keychain, Linux libsecret, Windows DPAPI)
+- Fallback: plaintext in `~/.fdx/auth.json` with a `SecurityWarning` emitted
 
 ## Environment Variables
 
-| Variable           | Description           | Default                                |
-| ------------------ | --------------------- | -------------------------------------- |
-| `FDX_MCP_SERVER`   | MCP server URL        | `https://mcp.fd.xyz`                   |
-| `FDX_REDIRECT_URI` | OAuth callback URI    | `http://localhost:6260/oauth/callback` |
-| `FDX_STORE_PATH`   | Token store file path | `~/.fdx/auth.json`                     |
+| Variable         | Description                                             | Default              |
+| ---------------- | ------------------------------------------------------- | -------------------- |
+| `FDX_MCP_SERVER` | MCP server URL                                          | `https://mcp.fd.xyz` |
+| `FDX_STORE_PATH` | Token store path                                        | `~/.fdx/auth.json`   |
+| `FDX_LOG_PATH`   | Log file path                                           | `~/.fdx/fdx.log`     |
+| `FDX_LOG_LEVEL`  | Log verbosity (`debug`\|`info`\|`warn`\|`error`\|`off`) | `info`               |
 
 ## Error Handling
 
-- "not authenticated" — Run `fdx setup` to authenticate
+- "not authenticated" — Run `fdx login --email <email>` then `fdx verify --code <OTP>`
 - "token expired" with refresh token — Will auto-refresh on next call; no action needed
-- "token expired" without refresh token — Run `fdx setup` again
-- "OAuth state mismatch" — Possible CSRF; restart with `fdx setup`
-- "Callback server error" — Port 6260 may be in use; try `--device` flow instead
+- "token expired" / "SESSION_EXPIRED" — Refresh token also expired; run `fdx login` again
+- "AUTH_REFRESH_FAILED" — Token refresh failed; run `fdx login` to re-authenticate

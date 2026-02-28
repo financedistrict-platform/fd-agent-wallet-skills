@@ -5,10 +5,10 @@ user-invocable: true
 disable-model-invocation: false
 allowed-tools:
   [
-    'Bash(fdx status*)',
-    'Bash(fdx call transferTokens*)',
-    'Bash(fdx call getWalletOverview*)',
-    'Bash(fdx call resolveNameService*)',
+    "Bash(fdx status*)",
+    "Bash(fdx call transferTokens*)",
+    "Bash(fdx call getWalletOverview*)",
+    "Bash(fdx call resolveNameService*)",
   ]
 ---
 
@@ -141,6 +141,6 @@ fdx call transferTokens \
 
 ## Error Handling
 
-- "Not authenticated" — Run `fdx setup` first, or see `authenticate` skill
+- "Not authenticated" — See `authenticate` skill to sign in
 - "Insufficient balance" — Check balance with `getWalletOverview`; see `fund-wallet` skill
 - "Invalid recipient" — Verify the address format matches the target chain

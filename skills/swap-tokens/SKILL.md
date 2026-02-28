@@ -3,7 +3,12 @@ name: swap-tokens
 description: Swap or trade tokens via decentralized exchanges on any supported chain. Use when you or the user want to trade, swap, exchange, buy, sell, or convert between tokens like USDC, ETH, WETH, SOL, or any other token. Covers phrases like "buy ETH with USDC", "sell ETH for USDC", "convert USDC to ETH", "swap tokens", "get some ETH".
 user-invocable: true
 disable-model-invocation: false
-allowed-tools: ["Bash(fdx status*)", "Bash(fdx call swapTokens*)", "Bash(fdx call getWalletOverview*)"]
+allowed-tools:
+  [
+    "Bash(fdx status*)",
+    "Bash(fdx call swapTokens*)",
+    "Bash(fdx call getWalletOverview*)",
+  ]
 ---
 
 # Swapping Tokens
@@ -117,7 +122,7 @@ fdx call swapTokens \
 
 ## Error Handling
 
-- "Not authenticated" — Run `fdx setup` first, or see `authenticate` skill
+- "Not authenticated" — See `authenticate` skill to sign in
 - "Insufficient balance" — Check balance with `getWalletOverview`; see `fund-wallet` skill
 - "Cannot swap a token to itself" — `tokenIn` and `tokenOut` must be different
 - "No liquidity" — Try a smaller amount or a different token pair

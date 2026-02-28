@@ -5,11 +5,11 @@ user-invocable: true
 disable-model-invocation: false
 allowed-tools:
   [
-    'Bash(fdx status*)',
-    'Bash(fdx call getWalletOverview*)',
-    'Bash(fdx call getAccountActivity*)',
-    'Bash(fdx call getMyInfo*)',
-    'Bash(fdx call getTokenPrice*)',
+    "Bash(fdx status*)",
+    "Bash(fdx call getWalletOverview*)",
+    "Bash(fdx call getAccountActivity*)",
+    "Bash(fdx call getMyInfo*)",
+    "Bash(fdx call getTokenPrice*)",
   ]
 ---
 
@@ -129,5 +129,5 @@ fdx call getAccountActivity --accountAddress 0x1234...abcd --chainKey ethereum -
 
 ## Error Handling
 
-- "Not authenticated" — Run `fdx setup` first, or see `authenticate` skill
-- "AUTH_REFRESH_FAILED" — Token expired; run `fdx setup` to re-authenticate
+- "Not authenticated" — See `authenticate` skill to sign in
+- "AUTH_REFRESH_FAILED" — Token expired; run `fdx login` to re-authenticate

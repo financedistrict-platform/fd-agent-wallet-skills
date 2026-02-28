@@ -5,10 +5,10 @@ user-invocable: true
 disable-model-invocation: false
 allowed-tools:
   [
-    'Bash(fdx status*)',
-    'Bash(fdx call getX402Content*)',
-    'Bash(fdx call authorizePayment*)',
-    'Bash(fdx call getWalletOverview*)',
+    "Bash(fdx status*)",
+    "Bash(fdx call getX402Content*)",
+    "Bash(fdx call authorizePayment*)",
+    "Bash(fdx call getWalletOverview*)",
   ]
 ---
 
@@ -129,7 +129,7 @@ The Finance District wallet supports **multi-chain and multi-asset** x402 paymen
 
 ## Error Handling
 
-- "Not authenticated" — Run `fdx setup` first, or see `authenticate` skill
+- "Not authenticated" — See `authenticate` skill to sign in
 - "Insufficient balance" — Check balance; see `fund-wallet` skill
 - "No x402 payment requirements found" — The URL may not be an x402-enabled endpoint
 - "Payment failed" — May be a network issue; retry or try a different preferred network
