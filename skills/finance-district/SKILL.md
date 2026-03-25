@@ -142,11 +142,20 @@ Always present risk level and APY to the human before depositing.
 
 ### Pay for Services (x402)
 
+Two paths depending on resource type:
+
+**HTTP path** — when the resource is an HTTP endpoint returning `402 Payment Required`:
+
 ```bash
 fdx wallet call getX402Content --url <x402-endpoint>
 ```
 
-Supports multi-chain and multi-asset x402 payments. Inform the human about payment amounts before executing.
+**MCP path** — when an MCP tool returns `isError: true` with `x402Version` and `accepts` array:
+1. Call the paid tool normally → receive PaymentRequired error
+2. Pass `content[0].text` (raw JSON string) to `authorizePayment` tool on Agent Wallet MCP Server
+3. Retry the tool with `_meta["x402/payment"]` set to `authorization.paymentPayload` from step 2
+
+Supports multi-chain and multi-asset x402 payments. Inform the human about payment amounts before executing. For detailed protocol flow, see `references/x402-payment-flow.md`.
 
 ### Fund the Wallet
 
