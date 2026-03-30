@@ -1,173 +1,44 @@
-# Prism Platform Operations Guide
+# Prism Merchant Operations Reference
 
-This reference covers the Prism platform tools in detail. Prism tools are dynamically discovered — run `fdx prism` to list all available tools or `fdx prism <method> --help` for parameter details.
+This reference covers Prism workflow patterns and configuration guidance. For individual tool parameters, use `fdx prism <method> --help`.
 
-Most tools accept an optional `--posId` parameter. If omitted, your default active Point of Service is used. Only pass `--posId` when managing multiple PoS configurations.
+## Merchant Setup Workflow
 
-## Points of Service
+Setting up a new merchant follows this sequence:
 
-A Point of Service (PoS) defines your merchant configuration — accepted assets, networks, and settlement wallets.
+1. **Authenticate**: Complete onboarding if not already authenticated (`fdx status`)
+2. **Set account type**: `fdx prism updateAccountType --accountType Business` (or Personal)
+3. **Create a Point of Service**: Define your merchant configuration with accepted assets and networks
+4. **Configure settlement wallets**: Add wallet addresses where you want to receive payments, by chain
+5. **Create API keys**: Generate keys for integrating payments into your application — the secret is returned **only once** on creation, so save it immediately
 
-### List and inspect
+## Points of Service (PoS)
 
-```bash
-fdx prism listPointsOfService
-fdx prism getPointOfServiceDetails                 # default PoS
-fdx prism getPointOfServiceDetails --posId <id>    # specific PoS
-```
+A PoS defines your merchant configuration — accepted assets, networks, and settlement wallets. Think of it as a payment profile.
 
-### Create a PoS
+- **Most tools default to your active PoS** — only pass `--posId` when managing multiple configurations
+- **Configuration sections** can be read and updated independently: assets, networks, and wallet mappings each have their own get/update actions via `configurePointOfService`
+- Use `--help` on `createPointOfService`, `updatePointOfService`, and `configurePointOfService` for the exact JSON structures expected
 
-```bash
-fdx prism createPointOfService \
-  --name "My Store" \
-  --configurationJson '{"assets":{"acceptedAssets":[]},"networks":{"acceptedNetworks":[]}}'
-```
+## Payment Monitoring Workflow
 
-### Update, activate, or deactivate
+For a merchant checking on their business:
 
-```bash
-fdx prism updatePointOfService --action update \
-  --name "Updated Store Name" \
-  --configurationJson '{"assets":{"acceptedAssets":[]},"networks":{"acceptedNetworks":[]}}'
+1. **Quick overview**: `getRecentPayments` for recent activity with a timeframe filter (7d, 30d, 90d, 180d, 1y)
+2. **Revenue summary**: `getEarnings` for total earnings, optionally filtered by date range
+3. **Payment details**: `getPaymentDetails` for a specific payment — returns blockchain tx hash, chain info, asset amounts, payer address, status, settlement breakdown, and fee lines
+4. **Full history**: `listPayments` with pagination and sorting for complete transaction history
 
-fdx prism updatePointOfService --action activate
-fdx prism updatePointOfService --action deactivate
-```
+## API Key Management
 
-### Configure assets, networks, and wallets
-
-The `configurePointOfService` tool reads or updates individual configuration sections:
-
-```bash
-# Read current config
-fdx prism configurePointOfService --action getAssets
-fdx prism configurePointOfService --action getNetworks
-
-# Update accepted assets
-fdx prism configurePointOfService --action updateAssets \
-  --assetsJson '[{"symbol":"USDC","minAmount":1.0,"isPreferred":true,"priority":1}]'
-
-# Update accepted networks
-fdx prism configurePointOfService --action updateNetworks \
-  --networksJson '{"acceptedNetworks":[{"networkId":"base","walletAddress":"0x...","isPreferred":true,"priority":1}]}'
-
-# Update wallet mappings
-fdx prism configurePointOfService --action updateWallets \
-  --walletsJson '{"base":"0xABC...","ethereum":"0xDEF..."}'
-```
-
-## Payments
-
-### List payments
-
-```bash
-fdx prism listPayments
-fdx prism listPayments --page 1 --pageSize 10 --sort "createdAt desc"
-```
-
-### Get payment details
-
-```bash
-fdx prism getPaymentDetails --paymentId <id>
-```
-
-Returns blockchain tx hash, chain info, asset amounts, payer address, status, settlement breakdown, and fee lines.
-
-## Dashboard
-
-### Earnings summary
-
-```bash
-fdx prism getEarnings
-fdx prism getEarnings \
-  --startDateTime "2025-01-01T00:00:00Z" \
-  --endDateTime "2025-12-31T23:59:59Z"
-```
-
-### Recent payments
-
-```bash
-fdx prism getRecentPayments
-fdx prism getRecentPayments --timeframe 30d --limit 10
-```
-
-Accepted timeframes: `7d`, `30d`, `90d`, `180d`, `1y`.
-
-## API Keys
-
-### List keys
-
-```bash
-fdx prism listApiKeys
-```
-
-Secret values are never returned in list responses.
-
-### Create a key
-
-```bash
-fdx prism manageApiKey --action create --name "Production Key"
-```
-
-The secret is returned **only once** on creation. Save it immediately.
-
-### Disable or delete
-
-```bash
-fdx prism manageApiKey --action disable --apiKeyId <id>
-fdx prism manageApiKey --action delete --apiKeyId <id>
-```
-
-Disabling revokes access without deleting. Deleting is permanent.
+- **Create**: Keys are generated with a name. The secret is shown only at creation — if lost, delete the key and create a new one
+- **Disable vs Delete**: Disabling revokes access without removing the key (reversible). Deleting is permanent
+- **List**: Secret values are never returned in list responses
 
 ## Settlement Wallets
 
-### List wallets
+Settlement wallets define where merchant payments are received, per chain.
 
-```bash
-fdx prism listWallets
-```
-
-### Create a wallet
-
-```bash
-fdx prism manageWallet --action create \
-  --chainId 8453 \
-  --asset USDC \
-  --address 0x... \
-  --label "Base USDC" \
-  --isDefault true
-```
-
-`--chainId` is the numeric chain ID (e.g. 8453 for Base, 1 for Ethereum).
-
-### Update or delete
-
-```bash
-fdx prism manageWallet --action update \
-  --walletId <id> \
-  --address 0x... \
-  --label "Updated Label"
-
-fdx prism manageWallet --action delete --walletId <id>
-```
-
-## Provider Profile
-
-### Get provider info
-
-```bash
-fdx prism getProviderInfo
-fdx prism getProviderInfo --includeChains true --includeTokens true
-```
-
-Returns provider name, account type, status, and the full list of supported networks and assets.
-
-### Set account type
-
-```bash
-fdx prism updateAccountType --accountType Business
-```
-
-Accepted values: `Personal` or `Business` (case-insensitive). Used during onboarding.
+- Each wallet is associated with a specific chain (by numeric chain ID — e.g. 8453 for Base, 1 for Ethereum) and asset
+- You can set a default wallet and label wallets for organization
+- Use `--help` on `manageWallet` for the exact parameters for create, update, and delete actions

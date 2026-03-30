@@ -1,8 +1,6 @@
 ---
 name: finance-district
 description: Manage crypto wallets and merchant payments via the Finance District platform (fdx CLI). Use when the user mentions wallets, tokens, crypto, DeFi, or merchant payments. Wallet operations — create/setup wallet, send/receive/transfer tokens, swap/trade/exchange crypto, check balance/portfolio, token prices, earn yield, stake, deposit/withdraw from DeFi vaults, x402 payments, pay for API services, fund wallet, bridge tokens, supported chains. Prism merchant operations — Points of Service (POS), create/list/manage API keys, settlement wallets, payment history, list payments, earnings, revenue. Trigger phrases include "set up wallet", "send ETH", "swap tokens", "check my balance", "show portfolio", "how much do I have", "earn yield", "buy/sell crypto", "use fdx", "create API key", "point of service", "payment history", "Prism". Covers EVM chains (Ethereum, Base, Polygon, Arbitrum, Optimism), Solana, and Bitcoin. Do NOT use for general payment processing unrelated to Finance District or fdx.
-version: 1.0.0
-homepage: https://fd.xyz
 user-invocable: true
 disable-model-invocation: false
 allowed-tools:
@@ -11,15 +9,6 @@ allowed-tools:
   - "Bash(npm install -g @financedistrict/fdx*)"
   - "Bash(npx @financedistrict/fdx*)"
   - "Bash(which fdx)"
-metadata:
-  openclaw:
-    emoji: "🏦"
-    requires:
-      bins:
-        - fdx
-    install:
-      - type: node
-        package: "@financedistrict/fdx"
 ---
 
 # Finance District
@@ -27,31 +16,38 @@ metadata:
 The `fdx` CLI is the Finance District platform CLI with two service areas:
 
 - **Wallet** (`fdx wallet`) — crypto wallet management, token transfers, DEX swaps, DeFi yield, and x402 payments across EVM chains, Solana, and Bitcoin
-- **Prism** (`fdx prism`) — merchant platform for payment processing, API key management, and Points of Service configuration
+- **Prism** (`fdx prism`) — payment gateway purpose-built for agentic commerce. Exposes tools to manage merchant accounts, Points of Service, API keys, and settlement wallets
 
-All commands return structured JSON.
+## 1. Prerequisites
 
-## 1. Installation & Setup
-
-Check if `fdx` is installed:
+The `fdx` CLI must be available. Check with:
 
 ```bash
 which fdx
 ```
 
-If not found, install it:
+If `fdx` is not installed, ask the human to install it with `npm install -g @financedistrict/fdx`, or offer to run the installation with their approval.
+
+## 2. Tool Discovery with --help
+
+The `fdx` CLI has comprehensive built-in help. **Use it as your primary source for tool parameters, input formats, and output structures.** Do not guess parameters — always check `--help` first.
 
 ```bash
-npm install -g @financedistrict/fdx
+fdx wallet                        # list all wallet tools
+fdx prism                         # list all Prism tools
+fdx wallet <method> --help        # full details for a specific wallet tool
+fdx prism <method> --help         # full details for a specific Prism tool
 ```
 
-## 2. Onboarding
+All commands return structured JSON.
 
-Authentication uses email OTP — no browser required. There are two paths depending on whether you have email inbox access.
+## 3. Authentication
+
+Authentication uses email OTP — no browser required.
 
 ### Autonomous Path (with email inbox access)
 
-If you have access to an email inbox (e.g. via AgentMail.to or another email API tool), you can complete onboarding without human assistance:
+If you have access to an email inbox (e.g. via AgentMail.to or another email API tool):
 
 1. Create or use an existing email inbox
 2. Register: `fdx register --email <inbox-email>`
@@ -59,199 +55,120 @@ If you have access to an email inbox (e.g. via AgentMail.to or another email API
 4. Verify: `fdx verify --code <OTP>`
 5. Confirm: `fdx status`
 
-For guided setup, use `fdx wallet onboardingAssistant --question "How do I get started?"` — it walks through each step interactively.
-
-For setting up autonomous email access, see `references/onboarding.md`.
-
 ### Human-Assisted Path
 
 If you do not have email inbox access:
 
 1. Ask the human for their email address
-2. Register or login:
-   - New users: `fdx register --email <email>`
-   - Returning users: `fdx login --email <email>`
+2. New users: `fdx register --email <email>` / Returning users: `fdx login --email <email>`
 3. Tell the human: "Check your email for an 8-digit code from Finance District and share it with me."
 4. Verify: `fdx verify --code <OTP>`
 5. Confirm: `fdx status`
 
-To log out and clear stored credentials: `fdx logout`
+For details on autonomous email setup, register vs login, and credential storage, see [references/authentication.md](references/authentication.md).
 
-## 3. Wallet Pre-Operation Checklist
+## 4. Pre-Operation Checklist
 
 Before any wallet operation, always:
 
-1. **Check authentication**: `fdx status` — if not authenticated, complete onboarding first
-2. **Check balances**: `fdx wallet getWalletOverview --chainKey <chain>` — verify sufficient token balance AND gas token balance for the target chain
+1. **Check authentication**: `fdx status` — if not authenticated, complete Section 3 first
+2. **Check balances**: `fdx wallet getWalletOverview --chainKey <chain>` — verify sufficient token balance AND native gas token balance
 3. **Confirm with the human** before executing irreversible operations (transfers, swaps, deposits) — state the amount, asset, chain, and recipient clearly
 4. **Do not assume** — if any detail is ambiguous (chain, token, amount, recipient), ask for clarification
 
-## 4. Wallet Operations
+If balance is insufficient: suggest funding the wallet, or swapping into the needed token/gas token if the user holds other tokens on that chain.
 
-Wallet operations work across all popular EVM chains, Solana, and Bitcoin. Basic operations (balance, send, receive) work on all chains. Swap, DeFi yield, and x402 payments are available on EVM chains and Solana but not Bitcoin. Use `fdx wallet` without arguments to list all available methods. Use `fdx wallet <method> --help` for parameter details.
+## 5. Wallet Workflows
 
-### Check Wallet State
+Wallet operations work across EVM chains, Solana, and Bitcoin. Basic operations (balance, send, receive) work on all chains. Swap, DeFi yield, and x402 payments are available on EVM and Solana but not Bitcoin. Always complete the pre-operation checklist (Section 4) before executing any workflow below.
 
-```bash
-fdx wallet getWalletOverview                          # all chains
-fdx wallet getWalletOverview --chainKey ethereum      # specific chain
-fdx wallet getMyInfo                                  # user profile and wallet addresses
-fdx wallet getTokenPrice --token ETH                  # token price lookup
-fdx wallet getAccountActivity --accountAddress <addr> --chainKey <chain>  # tx history
-```
+### Checking wallet state
 
-### Send Tokens
+Use `getWalletOverview` to see balances across all chains or for a specific chain. Use `getMyInfo` for the user's profile and wallet addresses. Use `getTokenPrice` to look up current token prices.
 
-```bash
-fdx wallet transferTokens \
-  --toAddress <address-or-ENS-name> \
-  --amount <amount> \
-  --asset <symbol> \
-  --chainKey <chain>
-```
+### Sending tokens
 
-Supports ENS (.eth), SNS (.sol), and Unstoppable Domains. Resolve names with `fdx wallet resolveNameService --nameOrAddress "name.eth"`.
+Confirm recipient, amount, chain, and asset with the human → execute transfer → verify with account activity.
 
-### Swap Tokens
+Supports ENS (.eth), SNS (.sol), and Unstoppable Domains — resolve names with `resolveNameService` or pass them directly to the transfer tool. Always double-check that the chain matches the recipient's expected chain — sending on the wrong chain may result in lost funds.
 
-```bash
-fdx wallet swapTokens \
-  --chainKey <chain> \
-  --tokenIn <symbol> \
-  --tokenOut <symbol> \
-  --amount <amount> \
-  --mode Execute
-```
+### Swapping tokens
 
-Default mode is `QuoteOnly` (returns quote without executing). Pass `--mode Execute` to actually swap. For large swaps, set `--maxSlippageBps` explicitly (100 = 1%).
+Get a quote first (default mode is QuoteOnly) → present the quote to the human → execute with `--mode Execute`.
 
-### Earn Yield (DeFi)
+For large swaps, set slippage explicitly. Common patterns: buy gas tokens by swapping stablecoins into the chain's native token, rebalance portfolio across tokens, or prepare tokens for a DeFi deposit.
 
-```bash
-# Discover strategies
-fdx wallet discoverYieldStrategies --chainKey <chain> --token <symbol>
+### Earning yield (DeFi)
 
-# Deposit
-fdx wallet depositForYield --strategyId <id> --fromAccountAddress <addr> --token <symbol> --amount <amount> --chainKey <chain>
+Discover strategies (filter by chain, token, protocol) → present risk level and APY to the human → get human's explicit approval → deposit → track position via wallet overview.
 
-# Withdraw
-fdx wallet withdrawFromYield --vaultTokenAddress <vault> --underlyingToken <symbol> --withdrawAmount <amount> --fromAccountAddress <addr> --chainKey <chain>
-```
+To withdraw, you need the vault token address from the original deposit or from the wallet overview. Always let the human make the final decision on DeFi deposits — these carry smart contract risk.
 
-Always present risk level and APY to the human before depositing.
+### Paying for services (x402)
 
-### Pay for Services (x402)
+x402 is an open payment protocol where resource servers respond with HTTP `402 Payment Required` containing payment requirements. The agent's role is to handle the HTTP communication and use the CLI only for payment authorization signing.
 
-Two paths depending on resource type:
+**Primary workflow** (when you have HTTP access via curl, wget, or equivalent):
 
-**HTTP path** — when the resource is an HTTP endpoint returning `402 Payment Required`:
+1. Call the resource server → receive 402 with `PaymentRequired` JSON (contains `accepts[]` with payment options)
+2. Pass the payment requirements to `fdx wallet authorizePayment` → receive signed `PaymentPayload`
+3. Retry the request with the payment payload attached
 
-```bash
-fdx wallet getX402Content --url <x402-endpoint>
-```
+**Fallback** (when you do not have HTTP tools available): use `fdx wallet getX402Content` which bundles the entire flow into a single command.
 
-**MCP path** — when an MCP tool returns `isError: true` with `x402Version` and `accepts` array:
-1. Call the paid tool normally → receive PaymentRequired error
-2. Pass `content[0].text` (raw JSON string) to `authorizePayment` tool on Agent Wallet MCP Server
-3. Retry the tool with `_meta["x402/payment"]` set to `authorization.paymentPayload` from step 2
+For the full x402 protocol flow and implementation details, see [references/x402-payment-flow.md](references/x402-payment-flow.md).
 
-Supports multi-chain and multi-asset x402 payments. Inform the human about payment amounts before executing. For detailed protocol flow, see `references/x402-payment-flow.md`.
+### Funding the wallet
 
-### Fund the Wallet
+The wallet is funded by direct token transfer to the wallet address (from another wallet or exchange) or through the Finance District web dashboard. Get the wallet address from `getWalletOverview`.
 
-The wallet is funded by direct token transfer to the wallet address (from another wallet or exchange) or through the Finance District web dashboard. Get the wallet address from `fdx wallet getWalletOverview`.
+For detailed chain capabilities, safety notes, and advanced patterns, see [references/operations.md](references/operations.md).
 
-For detailed operation guides, see `references/operations.md`.
+## 6. Prism Workflows
 
-## 5. Prism Platform Operations
+Prism is the Finance District payment gateway purpose-built for agentic commerce. Use `fdx prism` to list all available tools. Always complete the pre-operation checklist (Section 4) before executing any workflow below.
 
-Prism is the Finance District merchant platform — manage Points of Service, payments, API keys, and settlement wallets. Use `fdx prism` without arguments to list all available tools. Use `fdx prism <method> --help` for parameter details.
+### Setting up as a merchant
+
+Set account type (Personal/Business) → create a Point of Service → configure accepted assets and networks → set up settlement wallets → create API keys.
+
+### Managing payments and earnings
+
+Use the payment and earnings tools to view transaction history, individual payment details (including blockchain tx hash and settlement breakdown), and earnings summaries over time.
 
 ### Points of Service
 
-A Point of Service (PoS) is your merchant configuration — it defines which assets and networks you accept. Most Prism tools use `--posId` to target a specific PoS. If omitted, your default active PoS is used.
+A Point of Service (PoS) defines your merchant configuration — accepted assets, networks, and settlement wallets. Most Prism tools default to your active PoS. Only pass `--posId` when managing multiple configurations.
 
-```bash
-fdx prism listPointsOfService                     # list all PoS
-fdx prism getPointOfServiceDetails                 # default PoS details
-fdx prism createPointOfService --name "My Store" \
-  --configurationJson '{"assets":{"acceptedAssets":[]},"networks":{"acceptedNetworks":[]}}'
-```
+For detailed Prism workflow patterns, see [references/prism-operations.md](references/prism-operations.md).
 
-### View Payments & Earnings
+## 7. Principles
 
-```bash
-fdx prism listPayments                             # all payments
-fdx prism getPaymentDetails --paymentId <id>       # single payment details
-fdx prism getEarnings                              # total earnings summary
-fdx prism getRecentPayments --timeframe 30d        # recent activity
-```
-
-### Manage API Keys
-
-```bash
-fdx prism listApiKeys
-fdx prism manageApiKey --action create --name "Production Key"
-fdx prism manageApiKey --action disable --apiKeyId <id>
-fdx prism manageApiKey --action delete --apiKeyId <id>
-```
-
-The secret is returned only once on creation — save it immediately.
-
-### Manage Settlement Wallets
-
-```bash
-fdx prism listWallets
-fdx prism manageWallet --action create \
-  --chainId 8453 --asset USDC --address 0x... --label "Base USDC"
-```
-
-### Provider Profile
-
-```bash
-fdx prism getProviderInfo                          # profile + supported chains/tokens
-fdx prism updateAccountType --accountType Business
-```
-
-For detailed Prism operations guide, see `references/prism-operations.md`.
-
-## 6. Decision-Making Principles
-
-- **Balance check first**: Before sends, swaps, or deposits — check both the token balance and the native gas token balance on that chain
-- **Insufficient gas?** Suggest the human fund gas tokens, or swap into the gas token if they hold other tokens on that chain
-- **Insufficient token balance?** Suggest funding the wallet or swapping from another token
-- **Discover available tools**: Run `fdx wallet` with no arguments to see all methods
-- **Parameter help**: Run `fdx wallet <method> --help` for any method's parameters
+- **Use --help liberally**: When unsure about a tool's parameters or behavior, check `--help` before guessing
 - **Smart Accounts**: Use existing Smart Account addresses as `--fromAccountAddress` in transfers, swaps, and yield operations
-- **Prism tool discovery**: Run `fdx prism` with no arguments to see all merchant tools
-- **Point of Service context**: Most Prism tools default to your active PoS — only pass `--posId` when managing multiple configurations
+- **Confirm before executing**: Any operation that moves funds requires human confirmation first
+- **Discover available tools**: Run `fdx wallet` or `fdx prism` with no arguments to see what's available
 
-## 7. Troubleshooting & Support
+## 8. Troubleshooting
 
 | Error | Action |
 |-------|--------|
 | "not authenticated" | Run `fdx login --email <email>` then `fdx verify --code <OTP>` |
-| "token expired" with refresh token | Auto-refreshes on next call — no action needed. Tokens stored in OS credential store (macOS Keychain, Linux libsecret, Windows DPAPI); fallback: `~/.fdx/auth.json` |
+| "token expired" with refresh token | Auto-refreshes on next call — no action needed |
 | "SESSION_EXPIRED" / "AUTH_REFRESH_FAILED" | Refresh token expired — run `fdx login` again |
 | "Insufficient balance" | Check balance with `getWalletOverview`; fund or swap |
 | "No liquidity" | Try smaller amount or different token pair |
-| "tool not found" (Prism) | Run `fdx prism` to list available tools; check spelling |
+| "tool not found" | Run `fdx wallet` or `fdx prism` to list available tools; check spelling |
 | "provider not found" | Complete Prism onboarding — set account type with `updateAccountType` |
 
-For conceptual questions about wallet safety, Prism configuration, key management, or fees:
+For diagnostic commands and issue reporting, see [references/troubleshooting.md](references/troubleshooting.md).
 
-```bash
-fdx wallet helpNarrative --question "How does key delegation work?"
-```
+## 9. Reference Files
 
-When something goes wrong that you cannot resolve, report it:
+Consult these for deeper guidance on specific topics. **Do not load them all — only read the one relevant to your current task.**
 
-```bash
-fdx wallet reportIssue \
-  --title "<short summary>" \
-  --description "<what happened, steps to reproduce>"
-```
-
-Check CLI version for diagnostics: `fdx wallet getAppVersion`
-
-For detailed troubleshooting, see `references/troubleshooting.md`.
+- [references/authentication.md](references/authentication.md) — autonomous email setup, register vs login, credential storage, logout
+- [references/operations.md](references/operations.md) — chain capability matrix, safety patterns, advanced wallet workflows
+- [references/prism-operations.md](references/prism-operations.md) — merchant setup patterns, PoS configuration, API key and settlement wallet management
+- [references/x402-payment-flow.md](references/x402-payment-flow.md) — x402 protocol flow, authorizePayment usage, and getX402Content fallback
+- [references/troubleshooting.md](references/troubleshooting.md) — detailed error reference, diagnostic commands, issue reporting

@@ -1,71 +1,52 @@
-# x402 Payment Flow — MCP & HTTP Paths
+# x402 Payment Protocol Flow
 
-## Path Selection
+x402 is an open payment protocol ([spec](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md)) that enables paid API access using crypto. Resource servers signal payment requirements via HTTP 402, and clients pay by signing an on-chain authorization.
 
-| Condition                                                        | Path        |
-|------------------------------------------------------------------|-------------|
-| HTTP endpoint returns `402 Payment Required`                     | **HTTP path** via `fdx wallet getX402Content` |
-| MCP tool returns `isError: true` with `x402Version` + `accepts`  | **MCP path** — 3-step flow below |
+The `fdx` CLI's role is specifically **signing the payment authorization**. The agent handles HTTP communication directly.
 
-Use whichever path matches the resource type. If the MCP client does not support `_meta`, fall back to HTTP path.
+## Protocol Flow
 
----
+Three parties are involved: your agent (client), the resource server (API), and a facilitator (verifies and settles payments on-chain).
 
-## HTTP Path
+### Step 1: Request the resource
 
-```bash
-fdx wallet getX402Content --url <x402-protected-endpoint>
-```
+Call the resource server normally (e.g. via curl). If payment is required, the server responds with HTTP `402 Payment Required` and a JSON body containing:
 
-CLI handles negotiation, signing, and retry automatically. Use `--help` for parameter details.
+- `x402Version` — protocol version (currently `2`)
+- `accepts[]` — array of acceptable payment methods, each with: `scheme`, `network` (CAIP-2 format, e.g. `eip155:8453` for Base), `amount` (atomic units), `asset` (token contract address), `payTo` (recipient address), `maxTimeoutSeconds`
+- `resource` — describes the protected resource (url, description, mimeType)
 
----
+### Step 2: Sign the payment authorization
 
-## MCP Path — 3-Step Flow
+Pass the payment requirements to `fdx wallet authorizePayment`. The CLI:
 
-```
-Agent --1--> Paid Tool Server (call tool normally, no payment)
-       <---- PaymentRequired error (isError: true, x402Version, accepts[])
+1. Selects the best payment option from the `accepts[]` array (matching available balance and supported networks)
+2. Signs an EIP-3009 `transferWithAuthorization` using the wallet's key
+3. Returns a `PaymentPayload` containing the signed authorization
 
-Agent --2--> Agent Wallet MCP Server (authorizePayment tool)
-       <---- Signed authorization (EIP-3009)
+Use `fdx wallet authorizePayment --help` for parameter details.
 
-Agent --3--> Paid Tool Server (retry tool + _meta["x402/payment"])
-       <---- Tool result + _meta["x402/payment-response"] (settlement receipt)
-```
+### Step 3: Retry with payment
 
-### Step 1: Call Paid Tool
+Retry the original request with the `PaymentPayload` attached. The resource server forwards it to the facilitator, which verifies the signature, simulates the transaction, and settles on-chain. On success, the resource server returns the requested content along with settlement details (including a transaction hash verifiable on a block explorer).
 
-Call the tool normally. On PaymentRequired, the response contains payment requirements in:
-- `content[0].text` — raw JSON string (use this for Step 2)
-- `structuredContent` — parsed object (for inspection)
+How the payload is attached depends on the resource server's expectations — typically via a request header or body field. Check the resource server's documentation.
 
-### Step 2: Authorize Payment
+## Fallback: getX402Content
 
-Call `authorizePayment` on the Agent Wallet MCP Server. The tool's own description has full parameter details.
+If you do not have access to HTTP tools (curl, wget, or equivalent), use `fdx wallet getX402Content` as a fallback. It bundles the entire flow — initial request, authorization signing, and retry — into a single command.
 
-**CRITICAL — what the tool description won't tell you:**
-- `paymentRequirementsResponseJson` must be the **raw JSON string** from `content[0].text` — do NOT parse it into an object first
+Use `fdx wallet getX402Content --help` for parameter details.
 
-### Step 3: Retry with Payment
+## Key Concepts
 
-From the `authorizePayment` response, extract **`authorization.paymentPayload`** only.
+- **Facilitator**: A third-party service that verifies payment authorizations and settles them on-chain. The agent never interacts with the facilitator directly — the resource server handles that
+- **EIP-3009**: A token standard for gasless transfers via signed authorization. The payer signs a message, and the facilitator executes the transfer on-chain — no gas needed from the payer
+- **Atomic units**: Payment amounts in `accepts[]` are in atomic units (e.g. 1000000 = 1 USDC with 6 decimals)
+- **CAIP-2 network IDs**: Chain identifiers like `eip155:8453` (Base), `eip155:1` (Ethereum), `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` (Solana mainnet)
 
-**DO NOT** use the full `authorization` object — only `paymentPayload`.
+## Before Paying
 
-Pass it as `_meta["x402/payment"]` when retrying the tool. `_meta` goes in MCP request **params**, not inside tool `arguments`:
-
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "<tool_name>",
-    "arguments": { "...same args as Step 1..." },
-    "_meta": {
-      "x402/payment": { "...authorization.paymentPayload object..." }
-    }
-  }
-}
-```
-
-On success, `_meta["x402/payment-response"]` contains `transaction` hash verifiable on block explorer.
+- Check wallet balance on the payment chain before authorizing
+- Inform the human about the payment amount, especially for unfamiliar endpoints
+- The `accepts[]` array may offer multiple payment options across different chains and assets — the CLI selects the best match automatically
