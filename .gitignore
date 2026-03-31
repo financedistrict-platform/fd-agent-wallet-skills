@@ -1,3 +1,6 @@
 # Cloned reference repos (not submodules — local only)
 fd-agent-wallet-cli/
 coinbase-agentic-wallet-skills/
+
+# Claude local settings
+.claude/

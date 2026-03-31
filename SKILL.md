@@ -1,6 +1,6 @@
 ---
 name: finance-district
-description: Manage crypto wallets and merchant payments via the Finance District platform (fdx CLI). Use when the user mentions wallets, tokens, crypto, DeFi, or merchant payments. Wallet operations — create/setup wallet, send/receive/transfer tokens, swap/trade/exchange crypto, check balance/portfolio, token prices, earn yield, stake, deposit/withdraw from DeFi vaults, x402 payments, pay for API services, fund wallet, bridge tokens, supported chains. Prism merchant operations — Points of Service (POS), create/list/manage API keys, settlement wallets, payment history, list payments, earnings, revenue. Trigger phrases include "set up wallet", "send ETH", "swap tokens", "check my balance", "show portfolio", "how much do I have", "earn yield", "buy/sell crypto", "use fdx", "create API key", "point of service", "payment history", "Prism". Covers EVM chains (Ethereum, Base, Polygon, Arbitrum, Optimism), Solana, and Bitcoin. Do NOT use for general payment processing unrelated to Finance District or fdx.
+description: Manage agent crypto wallets and merchant payments via the Finance District platform (fdx CLI). Use when the user mentions wallets, tokens, crypto, DeFi, or merchant payments. Wallet operations — create/setup wallet, send/receive/transfer tokens, swap/trade/exchange crypto, check balance/portfolio, token prices, earn yield, stake, deposit/withdraw from DeFi vaults, x402 payments, pay for API services, fund wallet, bridge tokens, supported chains. Prism merchant operations — Points of Service (POS), create/list/manage API keys, settlement wallets, payment history, list payments, earnings, revenue. Trigger phrases include "set up wallet", "send ETH", "swap tokens", "check my balance", "show portfolio", "how much do I have", "earn yield", "buy/sell crypto", "use fdx", "create API key", "point of service", "payment history", "Prism". Covers EVM chains (Ethereum, Base, Polygon, Arbitrum, Optimism), Solana, and Bitcoin. Do NOT use for general payment processing unrelated to Finance District or fdx.
 user-invocable: true
 disable-model-invocation: false
 allowed-tools:
@@ -151,15 +151,15 @@ For detailed Prism workflow patterns, see [references/prism-operations.md](refer
 
 ## 8. Troubleshooting
 
-| Error | Action |
-|-------|--------|
-| "not authenticated" | Run `fdx login --email <email>` then `fdx verify --code <OTP>` |
-| "token expired" with refresh token | Auto-refreshes on next call — no action needed |
-| "SESSION_EXPIRED" / "AUTH_REFRESH_FAILED" | Refresh token expired — run `fdx login` again |
-| "Insufficient balance" | Check balance with `getWalletOverview`; fund or swap |
-| "No liquidity" | Try smaller amount or different token pair |
-| "tool not found" | Run `fdx wallet` or `fdx prism` to list available tools; check spelling |
-| "provider not found" | Complete Prism onboarding — set account type with `updateAccountType` |
+| Error                                     | Action                                                                  |
+| ----------------------------------------- | ----------------------------------------------------------------------- |
+| "not authenticated"                       | Run `fdx login --email <email>` then `fdx verify --code <OTP>`          |
+| "token expired" with refresh token        | Auto-refreshes on next call — no action needed                          |
+| "SESSION_EXPIRED" / "AUTH_REFRESH_FAILED" | Refresh token expired — run `fdx login` again                           |
+| "Insufficient balance"                    | Check balance with `getWalletOverview`; fund or swap                    |
+| "No liquidity"                            | Try smaller amount or different token pair                              |
+| "tool not found"                          | Run `fdx wallet` or `fdx prism` to list available tools; check spelling |
+| "provider not found"                      | Complete Prism onboarding — set account type with `updateAccountType`   |
 
 For diagnostic commands and issue reporting, see [references/troubleshooting.md](references/troubleshooting.md).
 

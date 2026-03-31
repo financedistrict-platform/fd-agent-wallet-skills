@@ -1,37 +1,29 @@
-# Finance District Agent Wallet Skills
+# Finance District CLI Skill
 
-[Agent Skills](https://skills.sh) for the Finance District platform. These skills enable AI agents to authenticate, manage wallets, send tokens, swap via DEXs, earn DeFi yield, manage merchant payments, and configure Points of Service using the [`fdx`](https://www.npmjs.com/package/@financedistrict/fdx) CLI.
+Agent Skill for the [Finance District CLI](https://www.npmjs.com/package/@financedistrict/fdx) (`fdx`). This skill enables AI agents to access Finance District services through a single CLI — **Agent Wallet** for on-chain operations (hold, send, swap, earn DeFi yield across EVM chains, Solana, and Bitcoin) and **Prism** payment gateway for merchant payments, settlements, Points of Service, and API key management.
 
-## Available Skills
+## Skill
 
 | Skill | Description |
 | ----- | ----------- |
-| [authenticate](./skills/authenticate/SKILL.md) | Sign in to the wallet via OAuth 2.1 (browser or device flow) |
-| [wallet-overview](./skills/wallet-overview/SKILL.md) | Check balances, holdings, and transaction history across all chains |
-| [send-tokens](./skills/send-tokens/SKILL.md) | Transfer tokens to any address on any EVM chain or Solana |
-| [swap-tokens](./skills/swap-tokens/SKILL.md) | Swap tokens via decentralized exchanges on any supported chain |
-| [fund-wallet](./skills/fund-wallet/SKILL.md) | Add funds via web onramp or direct transfer to wallet address |
-| [yield-strategies](./skills/yield-strategies/SKILL.md) | Discover, deposit into, and withdraw from DeFi yield strategies |
-| [smart-accounts](./skills/smart-accounts/SKILL.md) | Deploy and manage multi-signature smart accounts |
-| [pay-for-service](./skills/pay-for-service/SKILL.md) | Access paid API endpoints via the x402 payment protocol |
-| [help-and-support](./skills/help-and-support/SKILL.md) | Get help, onboarding guidance, and report issues |
+| [fd-cli](./SKILL.md) | Finance District CLI — Agent Wallet (transfers, swaps, DeFi yield, x402 payments) and Prism payment gateway (merchant accounts, payments, settlements, Points of Service) |
 
 ## Installation
 
 Install with [Vercel's Skills CLI](https://skills.sh):
 
 ```bash
-npx skills add financedistrict-platform/fd-agent-wallet-skills
+npx skills add financedistrict-platform/fd-cli-skills
 ```
 
 ## Usage
 
-Skills are automatically available once installed. The agent will use them when relevant tasks are detected.
+The skill is automatically available once installed. The agent will use it when relevant tasks are detected.
 
 **Examples:**
 
 ```text
-Sign in to my wallet
+Sign in to my Finance District account
 ```
 
 ```text
@@ -66,20 +58,18 @@ Once installed, the `fdx` command is available directly — no `npx` needed.
 
 ## Key Differentiators
 
-- **Multi-chain**: Supports all EVM chains and Solana (not locked to a single chain)
+- **Two service domains**: Agent Wallet for on-chain operations and Prism for payment gateway — one CLI for both
+- **Multi-chain**: Supports all EVM chains, Solana, and Bitcoin (not locked to a single chain)
 - **DEX swaps**: Token swaps execute through decentralized exchanges, not centralized order books
 - **DeFi yield**: Discover and invest in yield strategies across protocols like Aave, Compound, and more
 - **Smart accounts**: Deploy and manage multi-sig wallets on-chain
 - **Multi-asset x402**: Pay for services with any supported asset on any chain
-- **Prism merchant platform**: Manage payments, API keys, settlement wallets, and Points of Service
+- **Prism payment gateway**: Manage merchant accounts, payments, API keys, settlement wallets, and Points of Service
+- **Dynamic tool discovery**: Prism tools are auto-discovered from the service at runtime
 
 ## Contributing
 
-To add a new skill:
-
-1. Create a folder in `./skills/` with a lowercase, hyphenated name
-2. Add a `SKILL.md` file with YAML frontmatter and instructions
-3. Follow the [Agent Skills specification](https://agentskills.io/specification) for the complete format
+See the [Agent Skills specification](https://agentskills.io/specification) for the skill format.
 
 ## License
 
