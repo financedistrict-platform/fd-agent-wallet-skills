@@ -35,6 +35,51 @@ For a merchant checking on their business:
 - **Disable vs Delete**: Disabling revokes access without removing the key (reversible). Deleting is permanent
 - **List**: Secret values are never returned in list responses
 
+## Staff Management
+
+Staff members are users granted access to specific Points of Service (POS) under an owner tenant. Manage them via two Prism tools: `listStaff` (read-only) and `manageStaff` (mutating).
+
+### Workflow
+
+1. **List current staff**: `fdx prism listStaff` — returns all staff with `staffId`, email, `allowedPosIds`, status (`active`/`revoked`), and invitation date
+2. **Invite**: Grant a user access to one or more POS (reactivates if previously revoked)
+3. **Granular POS control**: Add or remove specific POS without affecting others
+4. **Full revoke**: Remove all access for a staff member
+
+### Commands
+
+```bash
+# List all staff
+fdx prism listStaff
+
+# Invite staff member to specific POS
+fdx prism manageStaff --action invite --email staff@example.com --posIds "guid1,guid2"
+
+# Revoke all access (staffId from listStaff output)
+fdx prism manageStaff --action revoke --staffId "staff-guid"
+
+# Add more POS — additive, does not remove existing access
+fdx prism manageStaff --action grantPos --staffId "staff-guid" --posIds "guid3"
+
+# Remove specific POS — keeps all other POS intact
+fdx prism manageStaff --action revokePos --staffId "staff-guid" --posIds "guid1"
+```
+
+### Parameters
+
+| Param     | Required for                      | Format                                            |
+|-----------|-----------------------------------|---------------------------------------------------|
+| `action`  | all                               | `invite` \| `revoke` \| `grantPos` \| `revokePos` |
+| `email`   | `invite`                          | email string                                      |
+| `staffId` | `revoke`, `grantPos`, `revokePos` | GUID from `listStaff`                             |
+| `posIds`  | `invite`, `grantPos`, `revokePos` | `"guid1,guid2"` or `'["guid1","guid2"]'`          |
+
+**Notes:**
+- Always run `listStaff` first to get `staffId` values before mutating
+- `grantPos` is additive — safe to call multiple times
+- `revokePos` is granular — only removes listed POS, preserves the rest
+- Staff management is owner-only; staff cannot manage other staff via CLI
+
 ## Settlement Wallets
 
 Settlement wallets define where merchant payments are received, per chain.
