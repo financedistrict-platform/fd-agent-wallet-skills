@@ -9,6 +9,11 @@ allowed-tools:
   - "Bash(fdx wallet getWalletOverview*)"
   - "Bash(fdx status*)"
   - "Bash(fdx wallet getMyInfo*)"
+  - "Read"
+  - "Write"
+  - "Edit"
+  - "Bash(git config user.email)"
+  - "Bash(git config user.name)"
 metadata:
   openclaw:
     emoji: "🛍️"
@@ -115,9 +120,35 @@ Fetch the discovery doc. Confirm `xyz.fd.prism_payment` is advertised. If not, r
 
 Present 2–3 thoughtful picks (title, price, why-this-one). Ask which to buy.
 
-### 4.3 Collect shipping + buyer info
+### 4.3 Collect shipping + buyer info — memory-first
 
-Ask the user for: full name, email, street, city, postal code, country (ISO 3166-1 alpha-2 preferred). Don't guess.
+**Don't just ask.** A good personal shopper remembers the customer. Before asking the user to type anything, check available memory sources for their details and propose them for confirmation.
+
+**Check, in order:**
+
+1. **Conversation context** — has the user mentioned their name, email, or address earlier in this session? Use that.
+2. **Skill profile file** — `~/.claude/skills/fd-agentic-commerce/profile.md`. This is a persistent markdown file the skill maintains across sessions. See [references/user-profile.md](references/user-profile.md) for the format.
+3. **Global CLAUDE.md** — `~/.claude/CLAUDE.md` or project-level `CLAUDE.md`. Users commonly store identity info there.
+4. **OS / git identity** — `git config user.email`, `git config user.name`, `$USER`. Useful for first-time users; weak signal, always confirm.
+5. **The user is shopping for someone else** — if the request says "for my brother" / "for a friend", the recipient name may differ from the user's. The user's email stays as the order-confirmation email; only the shipping name/address is the recipient's.
+
+**Present, don't ask** — once you have candidates, propose them:
+
+> I have your details on file:
+> - **Name**: Janno Jarv (from your profile)
+> - **Email**: j.jaerv@1stdigital.com
+> - **Ship to**: Järveoja tee 8, Veibi, 52220, Estonia
+> - **Phone**: +372 5803 3175
+>
+> Use these, or give me new ones?
+
+If you have **nothing** on file, then ask — but ask compactly in one message, not a bulleted list of six questions. Give context: "I'll need shipping details. Share a name + address block (one line is fine) and I'll parse it."
+
+**After checkout succeeds**, offer to save or update the profile if info was new:
+
+> Want me to save this address as "home" for next time? (yes/no)
+
+Only write to the profile file with the user's explicit OK. Never save silently. See [references/user-profile.md](references/user-profile.md) for what to save and the file format.
 
 ### 4.4 Create the checkout session
 
@@ -214,4 +245,5 @@ Load only the one you need for the current step.
 - [references/payment-payload.md](references/payment-payload.md) — x402 `accepts[]` anatomy, CAIP-2 networks, token decimals, selection heuristics
 - [references/error-recovery.md](references/error-recovery.md) — severity taxonomy, common codes for both protocols
 - [references/unique-ids.md](references/unique-ids.md) — cross-platform Request-Id / Idempotency-Key generation (Python, Node, PowerShell, `uuidgen`)
+- [references/user-profile.md](references/user-profile.md) — persistent shopper profile (buyer info, saved addresses, gift recipients) at `~/.claude/skills/fd-agentic-commerce/profile.md`. Read before asking for shipping; write only with user consent.
 - [examples/gift-for-brother.md](examples/gift-for-brother.md) — full walkthrough of the acceptance-test scenario (UCP against the live demo store)
