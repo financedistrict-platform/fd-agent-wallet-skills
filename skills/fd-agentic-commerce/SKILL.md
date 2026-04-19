@@ -40,6 +40,8 @@ protocols. You drive HTTP with `curl`; the FD Agent Wallet signs the payment.
 | "On-chain tx hash: 0x…" | "Here's your payment confirmation: 0x…" (or just "Transaction: 0x…") |
 | "Checkout session ready_for_complete" | (say nothing — move to the confirmation step) |
 | "Wallet signing via MCP authorizePayment" | "Paying with your wallet" |
+| "Insufficient balance on all supported assets" | "Looks like you're short for this cart — you have X; the cart is Y." |
+| "Checking wallet balances via getWalletOverview" | (silent if sufficient; only speak up if you need to surface a shortfall) |
 
 Internally, still do all the protocol-level work (that's what this skill is for). But to the user, narrate only: looking up products, presenting recommendations, asking for shipping details, confirming price, paying, showing proof of purchase.
 
@@ -59,10 +61,11 @@ Rule of thumb: **if a word sounds like it belongs in an RFC, don't say it to the
 These protect the user's money. Follow them every time, regardless of protocol.
 
 1. **Verify the Prism handler before paying.** The merchant's discovery doc (or the checkout session response, depending on protocol) must advertise `xyz.fd.prism_payment`. If it doesn't, refuse to pay.
-2. **Never pay silently.** Before calling `complete`, show the user: line items, shipping, grand total with currency, shipping destination, and the payment network + asset + human-readable amount. Require explicit "yes, charge $X" confirmation.
-3. **Spending cap: $500 USD-equivalent** (configurable — see §7). If the total exceeds the cap, require the user to type back the exact amount.
-4. **Never overwrite an existing shipping address without asking.** Confirm before updating.
-5. **After payment, always display** the order id, the on-chain tx hash, and any receipt link. The user needs these to verify settlement.
+2. **Check wallet balance BEFORE collecting shipping details.** A real shopper doesn't fill in their address and then discover they can't pay. Once items are picked and a rough total is known, read the wallet's balances (§4.3) and compare. If no single supported asset covers the total on any one chain, surface it *before* asking for shipping and offer a trimmed cart. Don't waste the user's time.
+3. **Never pay silently.** Before calling `complete`, show the user: line items, shipping, grand total with currency, shipping destination, and the payment network + asset + human-readable amount. Require explicit "yes, charge $X" confirmation.
+4. **Spending cap: $500 USD-equivalent** (configurable — see §7). If the total exceeds the cap, require the user to type back the exact amount.
+5. **Never overwrite an existing shipping address without asking.** Confirm before updating.
+6. **After payment, always display** the order id, the on-chain tx hash, and any receipt link. The user needs these to verify settlement.
 
 ## 3. Protocol Dispatch
 
@@ -112,7 +115,35 @@ Fetch the discovery doc. Confirm `xyz.fd.prism_payment` is advertised. If not, r
 
 Present 2–3 thoughtful picks (title, price, why-this-one). Ask which to buy.
 
-### 4.3 Collect shipping + buyer info — memory-first
+### 4.3 Pre-flight balance check — do this BEFORE asking for shipping
+
+Once the user has picked their items, estimate the subtotal (items only — shipping is typically small, and we'll get an exact figure later). Then read the wallet's balances and sanity-check the cart is payable, the way a real shopper would before walking to the counter.
+
+**Steps:**
+
+1. **Estimate the subtotal.** Sum `unit_price × quantity` from the items you'll add to the cart. Use the cart's currency (e.g. EUR). Don't worry about shipping/tax yet — add a small buffer (~10%) to cover them.
+2. **Read the wallet.** Call the `getWalletOverview` MCP tool (no `chainKey` to get all chains, or loop over the chains the merchant likely supports — Base, Arbitrum, Ethereum + their sepolias for testnet merchants). For each held stablecoin, you have `{ asset, network, balance_atomic, decimals }` — convert to major units.
+3. **Compare.** Does the wallet hold enough of any single supported stablecoin on a single chain to cover the estimate?
+   - **Sufficient on at least one asset/chain** → proceed silently to shipping. No need to narrate the check.
+   - **Insufficient on every option** → stop. Surface the gap *now*. Don't collect shipping for an order that can't pay.
+
+**Surfacing an insufficient-balance situation (§0-friendly):**
+
+> I checked what your wallet has — looks like you're short for this cart. You have 20 EURC (on Base Sepolia) and 20 USDC (on Base Sepolia), but the cart is €42.
+>
+> Want to trim it down (e.g. mug only — €15), or top up first? Your wallet address is `0x318c…C806`.
+
+Do *not* say "insufficient balance", "chain support", "atomic units", or "stablecoin decimals" — the `§0` rule applies here too.
+
+**Caveats:**
+
+- Fiat↔stablecoin parity is currently 1:1 on the Prism side; in the future FX will apply (EUR 42 ≈ USDC 45.5). Budget a ~5–10% buffer when the cart currency differs from the stablecoin's peg currency.
+- The balance check is approximate by design. The final authoritative check happens when `authorizePayment` picks an entry. If the pre-flight passes but `authorizePayment` fails (shipping pushed the total over, rate moved, etc.), fall through to the same surfacing pattern above.
+- If `getWalletOverview` itself errors (auth issue, wallet not set up), tell the user to re-auth via their MCP client — don't silently skip the check.
+
+Only proceed to §4.4 once the cart looks payable.
+
+### 4.4 Collect shipping + buyer info — memory-first
 
 **Don't just ask.** A good personal shopper remembers the customer. Before asking the user to type anything, check available memory sources for their details and propose them for confirmation.
 
@@ -154,21 +185,21 @@ If yes, **write to the same place you read from**:
 
 Never save silently. Never save without explicit user consent. See [references/user-profile.md](references/user-profile.md) for the fallback file format.
 
-### 4.4 Create the checkout session
+### 4.5 Create the checkout session
 
 - **UCP**: `POST $UCP/checkout-sessions` with `line_items[].item.id` + `quantity`, optional `buyer` and `shipping_address`.
 - **ACP**: `POST $ACP/checkout_sessions` with `line_items[].id` + `quantity`, optional `buyer` and `fulfillment_details.address`. Requires `Authorization: Bearer <key>` and `Api-Version: 2026-01-30`.
 
 Capture the session id.
 
-### 4.5 Update with missing fields (if needed)
+### 4.6 Update with missing fields (if needed)
 
 - **UCP**: `PUT $UCP/checkout-sessions/{id}`
 - **ACP**: `POST $ACP/checkout_sessions/{id}` (yes, POST — ACP uses POST for updates)
 
 Wait for `status: "ready_for_complete"`.
 
-### 4.6 Confirm with the user (MANDATORY)
+### 4.7 Confirm with the user (MANDATORY)
 
 Plain-English summary:
 ```
@@ -184,7 +215,7 @@ Confirm? (yes/no)
 
 If total > $500 USD-equivalent, require the user to type back the exact amount.
 
-### 4.7 Authorize payment via FD Agent Wallet
+### 4.8 Authorize payment via FD Agent Wallet
 
 Call the `authorizePayment` MCP tool. It expects a **full x402 `PaymentRequirementsResponse`** envelope as a JSON-serialized string — not a single `accepts[]` entry. Given the envelope, the wallet picks the best entry for you based on balances when `autoApprove: true`.
 
@@ -201,14 +232,14 @@ If `authorizePayment` errors with an insufficient-balance or no-matching-option 
 
 For envelope shape, network/asset tables, and atomic-unit conversion, see [references/payment-payload.md](references/payment-payload.md).
 
-### 4.8 Complete the checkout
+### 4.9 Complete the checkout
 
 - **UCP**: `POST $UCP/checkout-sessions/{id}/complete` with `payment.instruments[]` carrying both `paymentPayload` and `paymentRequirements`.
 - **ACP**: `POST $ACP/checkout_sessions/{id}/complete` with `payment_data.instrument.credential.authorization` (the EIP-3009 auth string) and `x402_version`.
 
 Exact bodies in the wire docs.
 
-### 4.9 Confirm to the user
+### 4.10 Confirm to the user
 
 Show: `order.id`, `tx_hash`, block-explorer link if derivable from CAIP-2 network id, and any receipt URL. Tell the user delivery is on its way.
 

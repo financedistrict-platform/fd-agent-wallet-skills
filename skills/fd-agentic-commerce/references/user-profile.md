@@ -72,7 +72,7 @@ All fields are optional. Start empty; build up as the user confirms new details.
 
 ## Reading
 
-Before asking for shipping info (§4.3 of SKILL.md), read the file. If it doesn't exist, skip silently — the user hasn't shopped via this skill before.
+Before asking for shipping info (§4.4 of SKILL.md), read the file. If it doesn't exist, skip silently — the user hasn't shopped via this skill before.
 
 Present what's there as a confirmation, not a form:
 
@@ -108,7 +108,7 @@ If a recipient has a `default_address` that's a label, resolve it from `addresse
 
 ## Agent behavior summary
 
-1. Read profile at start of checkout flow (before §4.3).
+1. Read profile at start of checkout flow (before §4.4).
 2. Propose the best match; never hard-fail if the file is missing.
 3. After checkout, ask once whether to save new info. One yes/no question, not a form.
 4. Respect "don't save this one" — the user may not want every address remembered.
