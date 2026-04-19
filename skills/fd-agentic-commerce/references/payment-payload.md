@@ -1,6 +1,21 @@
 # x402 Payment Requirements — Selecting & Signing
 
-The checkout session's `ucp.payment_handlers["xyz.fd.prism_payment"][i].config.accepts[]` array holds the x402 payment options the merchant will accept. Each entry **is** the `paymentRequirements` object you pass to `fdx wallet authorizePayment`.
+The merchant's checkout session returns a Prism config at `ucp.payment_handlers["xyz.fd.prism_payment"][i].config`. That object **is** the x402 `PaymentRequirementsResponse` envelope — the exact shape the wallet's `authorizePayment` tool expects as its `paymentRequirementsResponseJson` argument.
+
+## Envelope shape (what you pass to authorizePayment)
+
+```json
+{
+  "x402Version": 2,
+  "resource": {
+    "url": "https://merchant.example/ucp/checkout-sessions/cart_01…",
+    "description": "Purchase from <merchant>"
+  },
+  "accepts": [ /* one or more PaymentRequirements entries — see below */ ]
+}
+```
+
+All three top-level fields are required. **Do not** unwrap the envelope and pass a single `accepts[]` entry — the wallet's parser rejects that as malformed (missing top-level `resource`). Pass the whole `config` object through verbatim; if the merchant response omits an `error` field, that's fine — it's optional on the envelope.
 
 ## Anatomy of one `accepts[]` entry
 
@@ -46,34 +61,41 @@ The checkout session's `ucp.payment_handlers["xyz.fd.prism_payment"][i].config.a
 
 Divide `amount` by `10^decimals` to get the human number. If you're unsure of decimals, read `extra.name` and infer from the table, or ask the user to confirm.
 
-## Selecting which entry to sign
+## Selection is handled by the wallet when `autoApprove=true`
 
-Priority:
+You don't usually pre-filter `accepts[]` yourself. Pass the **whole envelope** to `authorizePayment` with `autoApprove: true` and the wallet picks the best entry based on the available balances it knows about, applying the following priorities:
 
-1. **Balance-first** — pick an entry where the wallet has `amount` available on `network`. Check with `fdx wallet getWalletOverview --chainKey <chain>` before signing.
-2. **Fewest hops** — prefer native stablecoin on a chain you already hold balance on over swapping first.
-3. **Gasless confirmation** — x402 uses EIP-3009, which is gasless for the payer on supported tokens (USDC, FDUSD). No gas funding needed on the payment chain.
-4. **Testnet discipline** — testnet chains (`:84532`, `:421614`, `:11155111`, `:97`) only settle with testnet funds; do not attempt on mainnet and vice versa.
+1. **Balance-first** — entries the wallet can actually pay from a held chain/asset are preferred over anything requiring a swap.
+2. **Fewest hops** — native stablecoin on a chain it already holds is preferred over swap-then-pay.
+3. **Gasless confirmation** — x402 uses EIP-3009, which is gasless for the payer on supported tokens (USDC, FDUSD); no gas funding needed on the payment chain.
+4. **Testnet discipline** — testnet chains (`:84532`, `:421614`, `:11155111`, `:97`) only settle with testnet funds.
 
-If no entry matches the wallet's current balance, tell the user which token + network they need to fund, showing their FD Agent Wallet address from `fdx wallet getMyInfo`.
+If you want to verify before calling, you can read balances with `fdx wallet getWalletOverview --chainKey <chain>` — but don't narrow `accepts[]` yourself before passing it in.
+
+If no entry can be satisfied, `authorizePayment` returns an error with the reason. Relay that to the user along with their FD Agent Wallet address (`fdx wallet getMyInfo`) so they know which token + network to fund.
 
 ## Signing
 
 ```bash
-fdx wallet authorizePayment --requirements '<JSON of one accepts[] entry>'
+# CLI
+fdx wallet authorizePayment \
+  --paymentRequirementsResponseJson "$(echo "$PRISM_CONFIG" | jq -c .)" \
+  --autoApprove true
 ```
 
-Returns a `PaymentPayload` — an object containing the signed EIP-3009 authorization. Do not modify it. Submit it verbatim inside the `complete` request's `credential.paymentPayload`.
+Or via MCP: call the `authorizePayment` tool with the same arguments:
+- `paymentRequirementsResponseJson` — string-encoded JSON of the full envelope
+- `autoApprove` — `true` (recommended) to let the wallet choose
 
-## MCP alternative
+Returns an object containing:
+- `paymentPayload` — signed EIP-3009 authorization (opaque — do not modify)
+- `paymentRequirements` — the single `accepts[]` entry the wallet picked and signed against
 
-If your agent runs inside an MCP host with `mcp.fd.xyz` attached, call the `authorizePayment` tool with the same `paymentRequirements` argument. The returned object slots into the same place.
-
-## Including both payload + requirements
+## Including both payload + requirements in `complete`
 
 Per the UCP spec and Prism handler, the `complete` request's `credential` must carry BOTH:
 
 - `paymentPayload` — what the wallet returned
-- `paymentRequirements` — the exact `accepts[]` entry the wallet signed against
+- `paymentRequirements` — the specific `accepts[]` entry echoed back by the wallet (NOT the whole envelope)
 
-This is how the facilitator reconstructs and verifies the EIP-712 signature. Don't drop `paymentRequirements`.
+This is how the facilitator reconstructs and verifies the EIP-712 signature. Don't drop `paymentRequirements` and don't substitute the envelope.

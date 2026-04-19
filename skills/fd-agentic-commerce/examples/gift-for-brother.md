@@ -133,20 +133,17 @@ User says "yes".
 
 ## Step 6 — Authorize
 
-Pick the USDC-on-Base-Sepolia entry (wallet has balance):
+Pass the **whole Prism config envelope** (not just one `accepts[]` entry) and let the wallet pick based on its balances:
 
 ```bash
-fdx wallet authorizePayment --requirements '{
-  "scheme":"exact","network":"eip155:84532",
-  "asset":"0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-  "amount":"340000",
-  "payTo":"0x40a01003f7543a3a3ee64ffb05504173bdb1c4fd",
-  "maxTimeoutSeconds":300,
-  "extra":{"name":"USDC","version":"2"}
-}'
+# $PRISM_CONFIG = the config object from
+# ucp.payment_handlers["xyz.fd.prism_payment"][0].config  in the session response
+fdx wallet authorizePayment \
+  --paymentRequirementsResponseJson "$(echo "$PRISM_CONFIG" | jq -c .)" \
+  --autoApprove true
 ```
 
-Returns a signed `PaymentPayload` — save it.
+Returns `{ paymentPayload, paymentRequirements }`. The `paymentRequirements` is the single `accepts[]` entry the wallet chose (e.g. USDC on Base Sepolia) — save both.
 
 ## Step 7 — Complete
 

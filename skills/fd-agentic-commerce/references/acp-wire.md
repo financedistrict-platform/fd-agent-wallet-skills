@@ -161,7 +161,7 @@ The Prism handler's payment requirements live in `payment_provider` (or `payment
 }
 ```
 
-Key difference vs UCP: the credential is **flat** — just an `authorization` string and version number, not a nested `paymentPayload` + `paymentRequirements` pair. Extract the authorization string from whatever `fdx wallet authorizePayment` returns (it's the EIP-3009 signed authorization).
+Key difference vs UCP: the credential is **flat** — just an `authorization` string and version number, not a nested `paymentPayload` + `paymentRequirements` pair. `authorizePayment` returns `{ paymentPayload, paymentRequirements }`; for ACP, base64-encode the whole returned object (serialized as the x402 `PaymentAuthorizationResult`) and put that string in `credential.authorization`. See [payment-payload.md](./payment-payload.md) for the envelope shape you pass as input.
 
 ### Response
 

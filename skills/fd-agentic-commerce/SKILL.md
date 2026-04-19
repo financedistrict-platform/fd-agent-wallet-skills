@@ -194,13 +194,22 @@ If total > $500 USD-equivalent, require the user to type back the exact amount.
 
 ### 4.7 Authorize payment via FD Agent Wallet
 
-Pick an x402 `accepts[]` entry (or the ACP equivalent — see wire docs) where the wallet has balance on that network/asset.
+The wallet's `authorizePayment` tool expects a **full x402 `PaymentRequirementsResponse`** envelope as a JSON-serialized string — not a single `accepts[]` entry. It then picks the best entry for you (given your balances) when `autoApprove=true`, or you preselect via other params.
+
+For UCP/ACP flows, the merchant already gives you this envelope: it's `ucp.payment_handlers["xyz.fd.prism_payment"][i].config` on the checkout-session response (with `x402Version`, `resource`, and `accepts[]` at the top level). Pass it through verbatim.
 
 ```bash
-fdx wallet authorizePayment --requirements '<JSON of the chosen accepts[] entry>'
+# CLI — paymentRequirementsResponseJson is the config object, JSON-stringified
+fdx wallet authorizePayment \
+  --paymentRequirementsResponseJson "$(echo "$PRISM_CONFIG" | jq -c .)" \
+  --autoApprove true
 ```
 
-Or via MCP: call the `authorizePayment` tool with the same object. Wallet returns a signed `PaymentPayload` (for UCP) or EIP-3009 authorization string (ACP extracts it from the same payload).
+Or via MCP: call the `authorizePayment` tool with:
+- `paymentRequirementsResponseJson` — string-encoded JSON of the full response envelope (top-level `x402Version`, `resource: { url, description }`, `accepts: [...]`)
+- `autoApprove` — `true` to let the wallet pick the best `accepts[]` entry based on available balances
+
+Wallet returns a signed `PaymentPayload` plus the `paymentRequirements` entry it signed against. Use BOTH in the complete call (UCP), or extract the EIP-3009 authorization string (ACP).
 
 For payment selection heuristics, network/asset tables, and atomic-unit conversion, see [references/payment-payload.md](references/payment-payload.md).
 
