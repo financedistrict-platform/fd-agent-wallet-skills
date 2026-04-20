@@ -1,13 +1,14 @@
-# Finance District Agent Skills
+# Finance District CLI Skills
 
-Agent Skills for the Finance District platform. Installing this package gives your agent multiple skills that cover wallet management, merchant operations, and agentic shopping.
+Claude skills for the Finance District command-line tooling (`fdx`). Covers wallet management, DeFi operations, and Prism merchant administration — all driven through the `fdx` CLI.
+
+Looking for the **shopping assistant** (pays at FD-enabled stores on your behalf)? That skill moved to [**fd-assistant-skills**](https://github.com/financedistrict-platform/fd-assistant-skills) — it's MCP-only and no longer needs the CLI.
 
 ## Skills
 
 | Skill | Description |
 | ----- | ----------- |
 | [finance-district](./skills/finance-district/SKILL.md) | Finance District CLI — Agent Wallet (transfers, swaps, DeFi yield, x402 payments) and Prism payment gateway (merchant accounts, payments, settlements, Points of Service, staff management) |
-| [fd-agentic-commerce](./skills/fd-agentic-commerce/SKILL.md) | Complete shopping checkouts at any agentic-commerce merchant that accepts the Finance District Prism payment handler. Auto-detects and dispatches to UCP or ACP — catalog/feed browsing, checkout session lifecycle, x402 payment authorization, and order confirmation |
 
 ## Installation
 
@@ -19,8 +20,6 @@ npx skills add financedistrict-platform/fd-cli-skills
 
 ## Usage
 
-Both skills are automatically available once installed. The agent picks the right one based on what you ask.
-
 **finance-district** (wallet, DeFi, merchant ops):
 
 ```text
@@ -30,14 +29,6 @@ Send 10 USDC to 0x1234...abcd on Base
 Find yield strategies for my USDC
 Show my recent payments
 Create an API key for my store
-```
-
-**fd-agentic-commerce** (agent-driven shopping):
-
-```text
-Buy me a gift from https://medusa.test.1stdigital.tech for my brother
-Order a t-shirt from the FD merch store and ship it to my Berlin address
-Checkout the items in my cart at <merchant>
 ```
 
 ## Prerequisites
