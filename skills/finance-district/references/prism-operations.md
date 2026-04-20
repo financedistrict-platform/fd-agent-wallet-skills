@@ -37,47 +37,44 @@ For a merchant checking on their business:
 
 ## Staff Management
 
-Staff members are users granted access to specific Points of Service (POS) under an owner tenant. Manage them via two Prism tools: `listStaff` (read-only) and `manageStaff` (mutating).
+Staff members are users granted access to a specific Point of Service. Each `(posId, email)` pair is an independent record with its own `staffId`. The same email may be staff on multiple POS — each one is managed separately via two Prism tools: `listStaff` (read-only) and `manageStaff` (mutating).
 
 ### Workflow
 
-1. **List current staff**: `fdx prism listStaff` — returns all staff with `staffId`, email, `allowedPosIds`, status (`active`/`revoked`), and invitation date
-2. **Invite**: Grant a user access to one or more POS (reactivates if previously revoked)
-3. **Granular POS control**: Add or remove specific POS without affecting others
-4. **Full revoke**: Remove all access for a staff member
+1. **List current staff**: `fdx prism listStaff` — returns all staff with `staffId`, email, `pointOfServiceId`, status (`Active`/`Revoked`), `invitedAt`, and `revokedAt`
+2. **Invite**: Grant a user access to a POS by email (reactivates if previously revoked on that POS)
+3. **Revoke**: Remove access from a specific POS by `staffId`
+4. **Multi-POS**: To invite a user to several POS, call `invite` once per POS
 
 ### Commands
 
 ```bash
-# List all staff
+# List all staff across tenant
 fdx prism listStaff
 
-# Invite staff member to specific POS
-fdx prism manageStaff --action invite --email staff@example.com --posIds "guid1,guid2"
+# List staff for a specific POS
+fdx prism listStaff --posId "pos-guid"
 
-# Revoke all access (staffId from listStaff output)
-fdx prism manageStaff --action revoke --staffId "staff-guid"
+# Invite staff to a specific POS (reactivates if previously revoked)
+fdx prism manageStaff --action invite --posId "pos-guid" --email staff@example.com
 
-# Add more POS — additive, does not remove existing access
-fdx prism manageStaff --action grantPos --staffId "staff-guid" --posIds "guid3"
-
-# Remove specific POS — keeps all other POS intact
-fdx prism manageStaff --action revokePos --staffId "staff-guid" --posIds "guid1"
+# Revoke staff from a specific POS (staffId from listStaff output)
+fdx prism manageStaff --action revoke --posId "pos-guid" --staffId "staff-guid"
 ```
 
 ### Parameters
 
-| Param     | Required for                      | Format                                            |
-|-----------|-----------------------------------|---------------------------------------------------|
-| `action`  | all                               | `invite` \| `revoke` \| `grantPos` \| `revokePos` |
-| `email`   | `invite`                          | email string                                      |
-| `staffId` | `revoke`, `grantPos`, `revokePos` | GUID from `listStaff`                             |
-| `posIds`  | `invite`, `grantPos`, `revokePos` | `"guid1,guid2"` or `'["guid1","guid2"]'`          |
+| Param     | Required for | Format                  |
+|-----------|--------------|-------------------------|
+| `action`  | all          | `invite` \| `revoke`    |
+| `posId`   | all          | GUID of the POS         |
+| `email`   | `invite`     | email string            |
+| `staffId` | `revoke`     | GUID from `listStaff`   |
 
 **Notes:**
-- Always run `listStaff` first to get `staffId` values before mutating
-- `grantPos` is additive — safe to call multiple times
-- `revokePos` is granular — only removes listed POS, preserves the rest
+- Always run `listStaff` first to get `staffId` values before revoking
+- Staff records are per-POS — revoking from one POS does not affect other POS records
+- To revoke all access for a user, revoke from each POS individually
 - Staff management is owner-only; staff cannot manage other staff via CLI
 
 ## Settlement Wallets
